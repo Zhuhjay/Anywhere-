@@ -1,5 +1,6 @@
 package com.absinthe.anywhere_.services.widget
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,13 +9,16 @@ import android.net.Uri
 import android.os.Handler
 import android.os.HandlerThread
 import android.provider.BaseColumns
+import android.text.TextUtils
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import com.absinthe.anywhere_.R
+import com.absinthe.anywhere_.constants.AnywhereType
 import com.absinthe.anywhere_.constants.Const
 import com.absinthe.anywhere_.constants.GlobalValues
 import com.absinthe.anywhere_.model.database.AnywhereEntity
 import com.absinthe.anywhere_.provider.CoreProvider.Companion.URI_ANYWHERE_ENTITY
+import com.absinthe.anywhere_.utils.AppUtils
 import com.absinthe.anywhere_.utils.AppUtils.updateWidget
 import com.absinthe.anywhere_.utils.UxUtils.getAppIcon
 import com.blankj.utilcode.util.ConvertUtils
@@ -30,7 +34,7 @@ class AppRemoteViewsService : RemoteViewsService() {
     return RemoteViewsFactory(this.applicationContext, intent)
   }
 
-  inner class RemoteViewsFactory internal constructor(context: Context, intent: Intent) :
+  class RemoteViewsFactory internal constructor(context: Context, intent: Intent) :
     RemoteViewsService.RemoteViewsFactory {
     private val mContext: WeakReference<Context> = WeakReference(context)
     private val mList: MutableList<AnywhereEntity> =
@@ -42,6 +46,7 @@ class AppRemoteViewsService : RemoteViewsService() {
      * AppRemoteViewsFactory 调用时执行，这个方法执行时间超过 20 秒会报错
      * 如果耗时长的任务应该在 onDataSetChanged 或者 getViewAt 中处理
      */
+    @SuppressLint("Range")
     override fun onCreate() {
       Timber.d("onCreate")
       mHandlerThread = HandlerThread("RemoteViewsFactory")
@@ -90,6 +95,7 @@ class AppRemoteViewsService : RemoteViewsService() {
      * 当调用 notifyAppWidgetViewDataChanged 方法时，触发这个方法
      * 例如：AppRemoteViewsFactory.notifyAppWidgetViewDataChanged();
      */
+    @SuppressLint("Range")
     override fun onDataSetChanged() {
       Timber.d("onDataSetChanged")
 
@@ -135,6 +141,7 @@ class AppRemoteViewsService : RemoteViewsService() {
     override fun onDestroy() {
       Timber.d("onDestroy")
       mList.clear()
+      mWorkerHandler.removeCallbacksAndMessages(null)
       mHandlerThread.quitSafely()
     }
 
@@ -150,37 +157,52 @@ class AppRemoteViewsService : RemoteViewsService() {
      * 创建并且填充，在指定索引位置显示的 View
      */
     override fun getViewAt(position: Int): RemoteViews? {
-      if (mList.isEmpty() || position < 0 || position >= mList.size || mContext.get() == null) {
-        return null
+      val context = mContext.get()
+      if (context == null || mList.isEmpty() || position < 0 || position >= mList.size) {
+        val packageName = context?.packageName ?: "com.absinthe.anywhere_"
+        return RemoteViews(packageName, R.layout.item_widget_list)
       }
+
       try {
         val ae = mList[position]
         var content = ae.appName
-        try {
-          if (IceBox.getAppEnabledSetting(mContext.get(), ae.param1) != 0) {
-            content = "\u2744" + content
+
+        val pkgName = if (ae.type == AnywhereType.Card.URL_SCHEME) {
+          if (TextUtils.isEmpty(ae.param2)) {
+            AppUtils.getPackageNameByScheme(context, ae.param1)
+          } else {
+            ae.param2!!
           }
-        } catch (e: PackageManager.NameNotFoundException) {
-          Timber.e(e)
+        } else {
+          ae.param1
+        }
+
+        if (!TextUtils.isEmpty(pkgName)) {
+          try {
+            if (IceBox.getAppEnabledSetting(context, pkgName) != 0) {
+              content = "\u2744" + content
+            }
+          } catch (e: PackageManager.NameNotFoundException) {
+            Timber.e(e)
+          }
         }
 
         // 创建在当前索引位置要显示的View
-        val context = mContext.get() ?: return null
         val rv = RemoteViews(context.packageName, R.layout.item_widget_list)
 
         // 设置要显示的内容
         rv.setTextViewText(R.id.tv_title, content)
         val icon: Drawable? = if (ae.iconUri.isNullOrEmpty()) {
-          getAppIcon(this@AppRemoteViewsService, ae, ConvertUtils.dp2px(45f))
+          getAppIcon(context, ae, ConvertUtils.dp2px(45f))
         } else {
           try {
             Drawable.createFromStream(
-              contentResolver.openInputStream(Uri.parse(ae.iconUri)),
+              context.contentResolver.openInputStream(Uri.parse(ae.iconUri)),
               null
             )
           } catch (e: Exception) {
             Timber.e(e)
-            getAppIcon(this@AppRemoteViewsService, ae, ConvertUtils.dp2px(45f))
+            getAppIcon(context, ae, ConvertUtils.dp2px(45f))
           }
         }
         if (icon != null) {
@@ -194,7 +216,8 @@ class AppRemoteViewsService : RemoteViewsService() {
         rv.setOnClickFillInIntent(R.id.rl_item, intent)
         return rv
       } catch (e: Exception) {
-        return null
+        Timber.e(e)
+        return RemoteViews(context.packageName, R.layout.item_widget_list)
       }
     }
 
