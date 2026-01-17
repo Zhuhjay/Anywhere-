@@ -71,10 +71,12 @@ object ScreenAdapter {
   fun scaleY(y: Int): Float = scaleY(y.toFloat())
 
   fun scaleX(x: Float): Float {
+    if (relWidth == 0) return x
     return (x / relWidth * deviceWidth)
   }
 
   fun scaleY(y: Float): Float {
+    if (relHeight == 0) return y
     return (y / relHeight * deviceHeight)
   }
 }

@@ -43,6 +43,7 @@ import com.absinthe.anywhere_.utils.ToastUtil
 import com.absinthe.anywhere_.utils.manager.ActivityStackManager
 import com.absinthe.anywhere_.utils.manager.DialogManager
 import com.absinthe.anywhere_.view.app.AnywhereDialogFragment
+import com.absinthe.libraries.utils.utils.UiUtils
 import com.blankj.utilcode.util.IntentUtils
 import com.catchingnow.icebox.sdk_client.IceBox
 import com.google.gson.Gson
@@ -669,7 +670,10 @@ object Opener {
 
                   if (x != null && y != null) {
                     if (AppUtils.atLeastN()) {
-                      click(x, y)
+                      val offset = UiUtils.getStatusBarHeight()
+                      Timber.d("Try to click at: $x, $y (Offset: $offset)")
+                      val result = pressWithTime(x, y + offset, 200)
+                      Timber.d("Click result: $result")
                     }
                   }
                 }

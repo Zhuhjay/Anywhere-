@@ -234,7 +234,7 @@ fun click(x: Int, y: Int): Boolean =
  */
 @RequiresApi(Build.VERSION_CODES.N)
 fun pressWithTime(x: Int, y: Int, delay: Int): Boolean {
-  return gesture(delay.toLong(), arrayOf(Pair(x, y)))
+  return gesture(delay.toLong(), arrayOf(Pair(x, y), Pair(x, y)))
 }
 
 /**
