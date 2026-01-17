@@ -67,6 +67,8 @@ object Opener {
   private var extraItem: ExtraBean.ExtraItem? = null
   private var extraItems: Array<ExtraBean.ExtraItem>? = null
 
+  private val gson = Gson()
+
   fun with(context: Context): Opener {
     this.context = WeakReference(context)
     type = TYPE_NONE
@@ -313,7 +315,7 @@ object Opener {
       )
     ) {
       val extraBean: ExtraBean? = try {
-        Gson().fromJson(item.param3, ExtraBean::class.java)
+        gson.fromJson(item.param3, ExtraBean::class.java)
       } catch (e: JsonSyntaxException) {
         null
       }
@@ -505,7 +507,7 @@ object Opener {
 
   private fun openBroadcastEntity(context: Context, item: AnywhereEntity) {
     val extraBean: ExtraBean? = try {
-      Gson().fromJson(item.param1, ExtraBean::class.java)
+      gson.fromJson(item.param1, ExtraBean::class.java)
     } catch (e: JsonSyntaxException) {
       null
     }
@@ -595,7 +597,7 @@ object Opener {
       requireBaseAccessibility()
       requireGestureAccessibility()
 
-      val a11yEntity = Gson().fromJson(item.param1, A11yEntity::class.java)
+      val a11yEntity = gson.fromJson(item.param1, A11yEntity::class.java)
 
       fun action() {
         GlobalScope.launch {

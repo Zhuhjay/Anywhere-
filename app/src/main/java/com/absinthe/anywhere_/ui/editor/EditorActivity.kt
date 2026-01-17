@@ -108,6 +108,14 @@ class EditorActivity : BaseActivity<ActivityEditorBinding>() {
     setUpBottomDrawer()
   }
 
+  override fun onDestroy() {
+    if (isBound) {
+      applicationContext.unbindService(conn)
+      isBound = false
+    }
+    super.onDestroy()
+  }
+
   override fun onBackPressed() {
     if (bottomDrawerBehavior.state != BottomSheetBehavior.STATE_HIDDEN) {
       bottomDrawerBehavior.state = BottomSheetBehavior.STATE_HIDDEN
